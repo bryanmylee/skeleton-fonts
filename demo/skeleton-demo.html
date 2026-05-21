@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skeleton Loader Font — Demo</title>
+<style>
+  @font-face {
+    font-family: "Inter";
+    src: url("../fonts/Inter-Regular_skeleton.ttf") format("truetype");
+    font-weight: normal;
+    font-style: normal;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: system-ui, sans-serif;
+    background: #f5f5f3;
+    color: #1a1a18;
+    padding: 3rem 2rem;
+    min-height: 100vh;
+  }
+
+  h1 { font-size: 1.5rem; font-weight: 500; margin-bottom: 0.25rem; }
+  p.sub { font-size: 0.875rem; color: #666; margin-bottom: 2.5rem; }
+
+  /* ── The skeleton font ── */
+  .skel {
+    font-family: "Inter";
+    font-variant-ligatures: contextual;   /* ensures calt fires */
+    -webkit-font-feature-settings: "calt" 1;
+    font-feature-settings: "calt" 1;
+    /*line-height: 2;          /* generous leading between rows */
+    word-spacing: 0;
+    letter-spacing: 0;
+    color: #d4d2ca;
+  }
+
+  /* ── Demo cards ── */
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    border: 0.5px solid #e0deda;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    max-width: 600px;
+  }
+
+  .card h2 {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #999;
+    margin-bottom: 1rem;
+  }
+
+  /* Avatar circle */
+  .avatar-row { display: flex; gap: 1rem; align-items: flex-start; }
+  .avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: #e8e6de; flex-shrink: 0; margin-top: 4px;
+  }
+  .avatar-lines { flex: 1; }
+
+  /* Animated shimmer variant */
+  @keyframes shimmer {
+    0%   { color: #dddbd3; }
+    50%  { color: #c8c6be; }
+    100% { color: #dddbd3; }
+  }
+  .skel.animate { animation: shimmer 1.6s ease-in-out infinite; }
+
+  /* Controls */
+  .controls {
+    display: flex; gap: 1rem; flex-wrap: wrap;
+    margin-bottom: 1.5rem; max-width: 600px;
+  }
+  label { font-size: 0.875rem; display: flex; align-items: center; gap: 0.4rem; cursor: pointer; }
+
+  .tag {
+    display: inline-block;
+    font-size: 11px; font-weight: 500;
+    background: #eeedfe; color: #3c3489;
+    padding: 2px 8px; border-radius: 4px;
+    vertical-align: middle; margin-left: 6px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Skeleton Loader Font</h1>
+<p class="sub">
+  Type <code>█</code> (U+2588). Ligatures auto-add rounded caps at word boundaries.
+  <span class="tag">font-feature-settings: "calt"</span>
+</p>
+
+<div class="controls">
+  <label><input type="checkbox" id="toggle-anim"> Shimmer animation</label>
+  <label>Size <input type="range" id="sz" min="10" max="40" value="20" style="width:100px"></label>
+  <label>Leading <input type="range" id="lh" min="1" max="4" step="0.1" value="2" style="width:100px"></label>
+</div>
+
+<!-- Card 1: plain text lines (different lengths) -->
+<div class="card">
+  <h2>Text lines</h2>
+  <div class="skel" id="demo-text">
+    <p>
+      Lorem ▐██████████████████▌ Lorem ipsum dolor sit, amet ▐█████▌ consectetur adipisicing elit. Ab reprehenderit accusantium saepe voluptatem quo consectetur modi at harum dolorem laudantium ▐█████████▌ possimus iste excepturi culpa ducimus, perferendis ipsum a porro iusto?
+    </p>
+    <p>
+      ▐████████████████████████▌
+    </p>
+    <p>
+      ▐█████████████████████████████████████▌
+    </p>
+    <p>
+      ▐████████████████▌
+    </p>
+  </div>
+</div>
+
+<!-- Card 2: article-style with avatar -->
+<div class="card">
+  <h2>Article / feed card</h2>
+  <div class="avatar-row">
+    <div class="avatar"></div>
+    <div class="avatar-lines skel" id="demo-article">
+      ▐████████████▌ ▐████████████████████▌<br>
+      ▐████████████████████████████████████████▌<br>
+      ▐████████████████████████████▌<br>
+      <br>
+      ▐███████████████████████████████████████████▌<br>
+      ▐████████████████████████▌<br>
+    </div>
+  </div>
+</div>
+
+<!-- Card 3: label + value pairs -->
+<div class="card">
+  <h2>Form skeleton</h2>
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 1.5rem;">
+    <div>
+      <div class="skel" style="font-size:10px; line-height:2.5">▐████████▌ Title<br></div>
+      <div class="skel" id="demo-form">▐████████████████████▌ Description ▐██████▌ matters <br></div>
+    </div>
+    <div>
+      <div class="skel" style="font-size:10px; line-height:2.5">▐████████████▌<br></div>
+      <div class="skel">▐████████████████████▌<br></div>
+    </div>
+    <div>
+      <div class="skel" style="font-size:10px; line-height:2.5">▐████████▌<br></div>
+      <div class="skel">▐████████████████████████████████▌<br></div>
+    </div>
+    <div>
+      <div class="skel" style="font-size:10px; line-height:2.5">▐██████████▌<br></div>
+      <div class="skel">▐███████████████▌<br></div>
+    </div>
+  </div>
+</div>
+
+<!-- Card 4: single-char pill demo -->
+<div class="card">
+  <h2>Pill (single █) vs multi-char bars</h2>
+  <div class="skel">
+    ▐█▌<br>
+    Lorem ▐█▌ ipsum <br>
+    ▐████▌<br>
+    ▐████████████▌<br>
+    ▐████████████████████████▌<br>
+  </div>
+</div>
+
+<script>
+  const skels = document.querySelectorAll('.skel');
+  const sz  = document.getElementById('sz');
+  const lh  = document.getElementById('lh');
+  const anim = document.getElementById('toggle-anim');
+
+  sz.addEventListener('input', () => {
+    skels.forEach(el => el.style.fontSize = sz.value + 'px');
+  });
+  lh.addEventListener('input', () => {
+    skels.forEach(el => el.style.lineHeight = lh.value);
+  });
+  anim.addEventListener('change', () => {
+    skels.forEach(el => el.classList.toggle('animate', anim.checked));
+  });
+</script>
+</body>
+</html>
