@@ -455,11 +455,11 @@ def main():
         out_dir = Path(f"{input_font_path}_skeleton")
         out_dir.mkdir(exist_ok=True)
         for font_path in input_font_path.iterdir():
-            if font_path.is_file() and font_path.suffix.lower() in [".ttf", ".woff"]:
+            if font_path.is_file() and font_path.suffix.lower() in [".ttf", ".woff2"]:
                 save_path = out_dir / font_path.name
                 process_font(args, font_path, save_path)
     else:
-        if input_font_path.suffix.lower() in [".ttf", ".woff"]:
+        if input_font_path.suffix.lower() in [".ttf", ".woff2"]:
             save_path = (
                 input_font_path.parent
                 / f"{input_font_path.stem}_skeleton{input_font_path.suffix}"
