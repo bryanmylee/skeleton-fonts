@@ -1,13 +1,19 @@
-
 <style>
   @font-face {
     font-family: "Inter";
-    src: url("../fonts_skeleton/Inter-VariableFont_opsz,wght.ttf") format("truetype-variations");
+    src: url("../fonts_skeleton/Inter-VariableFont_opsz,wght.ttf")
+      format("truetype-variations");
     font-weight: 100 900;
     font-style: normal;
   }
 
-  .demo-root *, .demo-root *::before, .demo-root *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  .demo-root *,
+  .demo-root *::before,
+  .demo-root *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 
   .demo-root {
     font-family: "Inter", system-ui, sans-serif;
@@ -15,10 +21,34 @@
     padding: 1.5rem 0;
   }
 
-  .demo-root h1 { font-size: 1.25rem; font-weight: 500; margin-bottom: 0.2rem; }
-  .demo-root p.sub { font-size: 0.8rem; color: var(--color-text-secondary); margin-bottom: 1.5rem; }
-  .demo-root code { font-family: var(--font-mono); font-size: 0.75rem; background: var(--color-background-secondary); padding: 1px 5px; border-radius: 4px; }
-  .tag { display: inline-block; font-size: 11px; font-weight: 500; background: #eeedfe; color: #3c3489; padding: 2px 8px; border-radius: 4px; vertical-align: middle; margin-left: 6px; }
+  .demo-root h1 {
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin-bottom: 0.2rem;
+  }
+  .demo-root p.sub {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 1.5rem;
+  }
+  .demo-root code {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    background: var(--color-background-secondary);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 500;
+    background: #eeedfe;
+    color: #3c3489;
+    padding: 2px 8px;
+    border-radius: 4px;
+    vertical-align: middle;
+    margin-left: 6px;
+  }
 
   .skel {
     font-family: "Inter", system-ui, sans-serif;
@@ -31,7 +61,9 @@
   }
 
   @media (prefers-color-scheme: dark) {
-    .skel { color: #4a4a46; }
+    .skel {
+      color: #4a4a46;
+    }
   }
 
   .card {
@@ -41,17 +73,45 @@
     padding: 1.25rem;
     margin-bottom: 1.25rem;
   }
-  .card h2 { font-size: 0.7rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-secondary); margin-bottom: 0.875rem; }
-  .avatar-row { display: flex; gap: 1rem; align-items: flex-start; }
-  .avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--color-background-secondary); flex-shrink: 0; margin-top: 4px; }
-  .avatar-lines { flex: 1; }
+  .card h2 {
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+    margin-bottom: 0.875rem;
+  }
+  .avatar-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+  .avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--color-background-secondary);
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+  .avatar-lines {
+    flex: 1;
+  }
 
   @keyframes shimmer {
-    0%   { opacity: 1; }
-    50%  { opacity: 0.55; }
-    100% { opacity: 1; }
+    0% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.55;
+    }
+    100% {
+      opacity: 1;
+    }
   }
-  .skel.animate { animation: shimmer 1.6s ease-in-out infinite; }
+  .skel.animate {
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
 
   .controls {
     display: grid;
@@ -60,9 +120,21 @@
     margin-bottom: 1.5rem;
     align-items: end;
   }
-  .ctrl-group { display: flex; flex-direction: column; gap: 6px; }
-  .ctrl-label { font-size: 12px; color: var(--color-text-secondary); display: flex; justify-content: space-between; }
-  .ctrl-label span { font-weight: 500; color: var(--color-text-primary); }
+  .ctrl-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .ctrl-label {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    display: flex;
+    justify-content: space-between;
+  }
+  .ctrl-label span {
+    font-weight: 500;
+    color: var(--color-text-primary);
+  }
 
   .weight-grid {
     display: grid;
@@ -83,30 +155,51 @@
 </style>
 
 <div class="demo-root">
-  <h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Skeleton loader font interactive demo with font weight, size, and leading controls</h2>
+  <h2
+    class="sr-only"
+    style="
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+    "
+  >
+    Skeleton loader font interactive demo with font weight, size, and leading
+    controls
+  </h2>
 
   <h1>Skeleton Loader Font</h1>
   <p class="sub">
-    Type <code>█</code> (U+2588). Ligatures auto-add rounded caps at word boundaries.
+    Type <code>█</code> (U+2588). Ligatures auto-add rounded caps at word
+    boundaries.
     <span class="tag">font-feature-settings: "calt"</span>
   </p>
 
   <div class="controls">
     <div class="ctrl-group">
       <div class="ctrl-label">Size <span id="sz-out">20px</span></div>
-      <input type="range" id="sz" min="10" max="40" value="20" step="1">
+      <input type="range" id="sz" min="10" max="40" value="20" step="1" />
     </div>
     <div class="ctrl-group">
       <div class="ctrl-label">Leading <span id="lh-out">2.0</span></div>
-      <input type="range" id="lh" min="1" max="4" step="0.1" value="2">
+      <input type="range" id="lh" min="1" max="4" step="0.1" value="2" />
     </div>
     <div class="ctrl-group">
       <div class="ctrl-label">Weight <span id="wt-out">400</span></div>
-      <input type="range" id="wt" min="100" max="900" step="1" value="400">
+      <input type="range" id="wt" min="100" max="900" step="1" value="400" />
     </div>
-    <div class="ctrl-group" style="justify-content: flex-end;">
-      <label style="font-size:13px; display:flex; align-items:center; gap:8px; cursor:pointer;">
-        <input type="checkbox" id="toggle-anim"> Shimmer
+    <div class="ctrl-group" style="justify-content: flex-end">
+      <label
+        style="
+          font-size: 13px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+        "
+      >
+        <input type="checkbox" id="toggle-anim" /> Shimmer
       </label>
     </div>
   </div>
@@ -114,7 +207,12 @@
   <div class="card">
     <h2>Text lines</h2>
     <div class="skel" id="demo-text">
-      <p>Lorem ▐██████████████████▌ Lorem ipsum dolor sit, amet ▐█████▌ consectetur adipisicing elit. Ab reprehenderit accusantium saepe voluptatem quo consectetur modi at harum dolorem laudantium ▐█████████▌ possimus iste excepturi culpa ducimus.</p>
+      <p>
+        Lorem ▐██████████████████▌ Lorem ipsum dolor sit, amet ▐█████▌
+        consectetur adipisicing elit. Ab reprehenderit accusantium saepe
+        voluptatem quo consectetur modi at harum dolorem laudantium ▐█████████▌
+        possimus iste excepturi culpa ducimus.
+      </p>
       <p>▐████████████████████████▌</p>
       <p>▐█████████████████████████████████████▌</p>
       <p>▐████████████████▌</p>
@@ -126,11 +224,11 @@
     <div class="avatar-row">
       <div class="avatar"></div>
       <div class="avatar-lines skel">
-        ▐████████████▌ ▐████████████████████▌<br>
-        ▐████████████████████████████████████████▌<br>
-        ▐████████████████████████████▌<br>
-        <br>
-        ▐███████████████████████████████████████████▌<br>
+        ▐████████████▌ ▐████████████████████▌<br />
+        ▐████████████████████████████████████████▌<br />
+        ▐████████████████████████████▌<br />
+        <br />
+        ▐███████████████████████████████████████████▌<br />
         ▐████████████████████████▌
       </div>
     </div>
@@ -138,22 +236,34 @@
 
   <div class="card">
     <h2>Form skeleton</h2>
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 1.5rem;">
+    <div
+      style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 1.5rem"
+    >
       <div>
-        <div class="skel" style="font-size:10px; line-height:2.5">▐████████▌ Title<br></div>
-        <div class="skel">▐████████████████████▌ Description ▐██████▌ matters<br></div>
+        <div class="skel" style="font-size: 10px; line-height: 2.5">
+          ▐████████▌ Title<br />
+        </div>
+        <div class="skel">
+          ▐████████████████████▌ Description ▐██████▌ matters<br />
+        </div>
       </div>
       <div>
-        <div class="skel" style="font-size:10px; line-height:2.5">▐████████████▌<br></div>
-        <div class="skel">▐████████████████████▌<br></div>
+        <div class="skel" style="font-size: 10px; line-height: 2.5">
+          ▐████████████▌<br />
+        </div>
+        <div class="skel">▐████████████████████▌<br /></div>
       </div>
       <div>
-        <div class="skel" style="font-size:10px; line-height:2.5">▐████████▌<br></div>
-        <div class="skel">▐████████████████████████████████▌<br></div>
+        <div class="skel" style="font-size: 10px; line-height: 2.5">
+          ▐████████▌<br />
+        </div>
+        <div class="skel">▐████████████████████████████████▌<br /></div>
       </div>
       <div>
-        <div class="skel" style="font-size:10px; line-height:2.5">▐██████████▌<br></div>
-        <div class="skel">▐███████████████▌<br></div>
+        <div class="skel" style="font-size: 10px; line-height: 2.5">
+          ▐██████████▌<br />
+        </div>
+        <div class="skel">▐███████████████▌<br /></div>
       </div>
     </div>
   </div>
@@ -166,52 +276,62 @@
   <div class="card">
     <h2>Pill (single █) vs multi-char bars</h2>
     <div class="skel">
-      ▐█▌<br>
-      Lorem ▐█▌ ipsum<br>
-      ▐████▌<br>
-      ▐████████████▌<br>
+      ▐█▌<br />
+      Lorem ▐█▌ ipsum<br />
+      ▐████▌<br />
+      ▐████████████▌<br />
       ▐████████████████████████▌
     </div>
   </div>
 </div>
 
 <script>
-  const skels = document.querySelectorAll('.skel');
-  const sz = document.getElementById('sz');
-  const lh = document.getElementById('lh');
-  const wt = document.getElementById('wt');
-  const anim = document.getElementById('toggle-anim');
-  const szOut = document.getElementById('sz-out');
-  const lhOut = document.getElementById('lh-out');
-  const wtOut = document.getElementById('wt-out');
+  const skels = document.querySelectorAll(".skel");
+  const sz = document.getElementById("sz");
+  const lh = document.getElementById("lh");
+  const wt = document.getElementById("wt");
+  const anim = document.getElementById("toggle-anim");
+  const szOut = document.getElementById("sz-out");
+  const lhOut = document.getElementById("lh-out");
+  const wtOut = document.getElementById("wt-out");
 
-  sz.addEventListener('input', () => {
-    skels.forEach(el => el.style.fontSize = sz.value + 'px');
-    szOut.textContent = sz.value + 'px';
+  sz.addEventListener("input", () => {
+    skels.forEach((el) => (el.style.fontSize = sz.value + "px"));
+    szOut.textContent = sz.value + "px";
   });
 
-  lh.addEventListener('input', () => {
-    skels.forEach(el => el.style.lineHeight = lh.value);
+  lh.addEventListener("input", () => {
+    skels.forEach((el) => (el.style.lineHeight = lh.value));
     lhOut.textContent = parseFloat(lh.value).toFixed(1);
   });
 
-  wt.addEventListener('input', () => {
-    skels.forEach(el => el.style.fontWeight = wt.value);
+  wt.addEventListener("input", () => {
+    skels.forEach((el) => (el.style.fontWeight = wt.value));
     wtOut.textContent = wt.value;
   });
 
   const weights = [100, 200, 300, 400, 500, 600, 700, 800, 900];
-  const weightLabels = {100:'Thin',200:'Extra Light',300:'Light',400:'Regular',500:'Medium',600:'Semi Bold',700:'Bold',800:'Extra Bold',900:'Black'};
-  const grid = document.getElementById('weight-grid');
+  const weightLabels = {
+    100: "Thin",
+    200: "Extra Light",
+    300: "Light",
+    400: "Regular",
+    500: "Medium",
+    600: "Semi Bold",
+    700: "Bold",
+    800: "Extra Bold",
+    900: "Black",
+  };
+  const grid = document.getElementById("weight-grid");
 
-  weights.forEach(w => {
-    const div = document.createElement('div');
-    div.className = 'weight-swatch';
+  weights.forEach((w) => {
+    const div = document.createElement("div");
+    div.className = "weight-swatch";
     div.innerHTML = `<div class="wlabel" style="font-weight:${w};">${w} — ${weightLabels[w]}</div><div class="skel" style="font-weight:${w}; font-size:16px;">▐████████████████▌<br>▐██████████▌</div>`;
     grid.appendChild(div);
   });
 
-  anim.addEventListener('change', () => {
-    skels.forEach(el => el.classList.toggle('animate', anim.checked));
+  anim.addEventListener("change", () => {
+    skels.forEach((el) => el.classList.toggle("animate", anim.checked));
   });
 </script>

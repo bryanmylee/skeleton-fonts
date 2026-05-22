@@ -1,0 +1,259 @@
+<style>
+  @font-face {
+    font-family: "Inter";
+    src: url("../fonts_skeleton/Inter-VariableFont_opsz,wght.ttf")
+      format("truetype-variations");
+    font-weight: 100 900;
+    font-style: normal;
+  }
+
+  :root {
+    --color-background-primary: #fefefe;
+    --color-background-secondary: #f2f2f2;
+    --color-border-tertiary: #ffffff;
+    --color-text-primary: #111111;
+    --color-text-secondary: #888888;
+    --color-skel: #d4d2ca;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-background-primary: #111111;
+      --color-background-secondary: #181818;
+      --color-border-tertiary: #222222;
+      --color-text-primary: #fefefe;
+      --color-text-secondary: #888888;
+      --color-skel: #4a4a46;
+    }
+  }
+
+  .demo-root *,
+  .demo-root *::before,
+  .demo-root *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background-color: var(--color-background-secondary);
+  }
+
+  .demo-root {
+    font-family: "Inter", system-ui, sans-serif;
+    color: var(--color-text-primary);
+    padding: 1.5rem;
+  }
+
+  .demo-root h1 {
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin-bottom: 0.2rem;
+  }
+  .demo-root p.sub {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 1.5rem;
+  }
+  .demo-root code {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    background: var(--color-background-secondary);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 500;
+    background: #eeedfe;
+    color: #3c3489;
+    padding: 2px 8px;
+    border-radius: 4px;
+    vertical-align: middle;
+    margin-left: 6px;
+  }
+
+  .skel {
+    font-family: "Inter", system-ui, sans-serif;
+    /* font-variant-ligatures: contextual;
+    -webkit-font-feature-settings: "calt" 1;
+    font-feature-settings: "calt" 1; */
+    /* word-spacing: 0;
+    letter-spacing: 0; */
+    color: var(--color-skel);
+  }
+
+  .card {
+    background: var(--color-background-primary);
+    border-radius: 28px;
+    border: 0.5px solid var(--color-border-tertiary);
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  .card h2 {
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+    margin-bottom: 0.875rem;
+  }
+  .avatar-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+  .avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--color-background-secondary);
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+  .avatar-lines {
+    flex: 1;
+  }
+
+  @keyframes shimmer {
+    0% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.55;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+  .skel.animate {
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+
+  .user.name {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 0.95em;
+  }
+
+  .user.email {
+    font-size: 14px;
+  }
+
+  .user.followers {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+  }
+
+  .weight-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+  }
+  .weight-swatch {
+    background: var(--color-background-primary);
+    border-radius: var(--border-radius-md);
+    border: 0.5px solid var(--color-border-tertiary);
+    padding: 10px 12px;
+  }
+  .weight-swatch .wlabel {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    margin-bottom: 6px;
+  }
+
+  .hidden {
+    display: none;
+  }
+</style>
+
+<div class="demo-root">
+  <h1>skeleton-fonts</h1>
+
+  <p class="sub">
+    Type <code>█</code> (U+2588), <code>▌</code> (U+258C), and
+    <code>▐</code> (U+2590).
+    <!-- <span class="tag">font-feature-settings: "calt"</span> -->
+  </p>
+
+  <div class="card">
+    <h2>Profile</h2>
+
+    <div class="avatar-row">
+      <div class="avatar"></div>
+      <div class="avatar-lines">
+        <div class="loading">
+          <p class="user name skel animate">▐█████████▌</p>
+          <p class="user email skel animate">▐██████████████████▌</p>
+        </div>
+        <div class="loaded">
+          <p class="user name">Bryan Lee</p>
+          <p class="user email">bryanmylee@gmail.com</p>
+        </div>
+        <p class="user followers">3,141 followers</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <label
+      style="
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+      "
+    >
+      <input type="checkbox" id="toggle-loading" /> Loading
+    </label>
+  </div>
+
+  <div class="card">
+    <h2>Weight comparison — all weights at once</h2>
+    <div class="weight-grid" id="weight-grid"></div>
+  </div>
+</div>
+
+<script>
+  const skels = document.querySelectorAll(".skel");
+
+  const weights = [100, 200, 300, 400, 500, 600, 700, 800, 900];
+  const weightLabels = {
+    100: "Thin",
+    200: "Extra Light",
+    300: "Light",
+    400: "Regular",
+    500: "Medium",
+    600: "Semi Bold",
+    700: "Bold",
+    800: "Extra Bold",
+    900: "Black",
+  };
+  const grid = document.getElementById("weight-grid");
+
+  weights.forEach((w) => {
+    const div = document.createElement("div");
+    div.className = "weight-swatch";
+    div.innerHTML = `<div class="wlabel" style="font-weight:${w};">${w} — ${weightLabels[w]}</div><div class="skel animate" style="font-weight:${w}; font-size:16px;">▐█████████████▌<br>▐███████▌</div>`;
+    grid.appendChild(div);
+  });
+
+  const loadings = document.querySelectorAll(".loading");
+  const loaded = document.querySelectorAll(".loaded");
+  loaded.forEach((el) => {
+    el.classList.add("hidden");
+  });
+
+  const toggleLoad = document.getElementById("toggle-loading");
+  toggleLoad.checked = true;
+  toggleLoad.addEventListener("change", () => {
+    loadings.forEach((el) => {
+      el.classList.toggle("hidden", !toggleLoad.checked);
+    });
+    loaded.forEach((el) => {
+      el.classList.toggle("hidden", toggleLoad.checked);
+    });
+  });
+</script>
