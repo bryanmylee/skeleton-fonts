@@ -108,8 +108,8 @@ def apply_variable_deltas(
     right_side_indices: List[int],
 ):
     """
-    Safely calculates and binds point-matched variations for new geometries
-    based on changes to the baseline character's overall advance width.
+    Safely calculates and binds point-matched variations for new geometries by
+    extracting explicit axis variations directly from the gvar table framework.
     """
     if "gvar" not in font or zero_glyph_name not in font["gvar"].variations:
         return
@@ -118,23 +118,50 @@ def apply_variable_deltas(
     new_variations: List[TupleVariation] = []
 
     for var in zero_variations:
-        # TrueType fonts store phantom points at the end of the coordinates
-        # tracking advance metrics. The first phantom point (point_count + 0)
-        # tracks the horizontal advance width change. We find out how much the
-        # width changes for this master axis variation state.
         delta_width = 0
+
+        # Method 1: Look for an explicit advance width delta in the coordinates
+        # tracking.
         if var.coordinates:
-            # Look at the horizontal delta mapping of the advance width phantom
-            # point. In fontTools, phantom points come right after the master
-            # outline points in gvar.
+            # Check the raw coordinates array length provided by the font
+            # compiler Some compilers include phantom points explicitly in the
+            # array
             phantom_idx = len(var.coordinates) - 4
             if (
                 0 <= phantom_idx < len(var.coordinates)
                 and var.coordinates[phantom_idx] is not None
             ):
                 coord = var.coordinates[phantom_idx]
-                if type(coord) is tuple:
+                if isinstance(coord, tuple) and coord[0] != 0:
                     delta_width = coord[0]
+
+        # Method 2: If the phantom point delta was optimized away (0, 0), find
+        # the point on the far right edge of the 'zero' glyph outline and copy
+        # its X shift.
+        if delta_width == 0 and var.coordinates:
+            zero_base_glyph = font["glyf"][zero_glyph_name]
+
+            # Find the index of the point closest to the right-most bounding
+            # edge of zero.
+            max_x = -99999
+            rightmost_point_idx = 0
+
+            # Loop through default base points to find the right-edge anchor
+            # index.
+            for i, pt in enumerate(zero_base_glyph.coordinates):
+                if pt[0] > max_x:
+                    max_x = pt[0]
+                    rightmost_point_idx = i
+
+            # Extract how much that specific right edge point shifted under
+            # this master state.
+            if (
+                rightmost_point_idx < len(var.coordinates)
+                and var.coordinates[rightmost_point_idx] is not None
+            ):
+                edge_coord = var.coordinates[rightmost_point_idx]
+                if isinstance(edge_coord, tuple):
+                    delta_width = edge_coord[0]
 
         if delta_width == 0:
             continue
@@ -161,7 +188,7 @@ def apply_variable_deltas(
         gvar_table.variations[target_glyph_name] = new_variations
 
 
-def process_variable_font(args: argparse.Namespace, font_path: Path, save_path: Path):
+def process_font(args: argparse.Namespace, font_path: Path, save_path: Path):
     try:
         font = TTFont(font_path)
     except Exception as e:
@@ -191,27 +218,43 @@ def process_variable_font(args: argparse.Namespace, font_path: Path, save_path: 
     glyf_table["uni2590"] = new_glyphs["skel_left"]
 
     # Setup automatic uniform baseline advanced tracking metrics.
-    zero_advance_width = cast(int, hmtx_table[zero_name][0])
-    hmtx_table["uni2588"] = (zero_advance_width, 0)
-    hmtx_table["uni258C"] = (zero_advance_width, 0)
-    hmtx_table["uni2590"] = (zero_advance_width, 0)
+    skel_width = cast(int, hmtx_table[zero_name][0])
+    hmtx_table["uni2588"] = (skel_width, 0)
+    hmtx_table["uni258C"] = (skel_width, 0)
+    hmtx_table["uni2590"] = (skel_width, 0)
 
     # Apply precise, structural deltas to the right-side vertices of our new shapes.
     # We pass the exact indices of points that sit on the right edge of our geometry.
     if "gvar" in font:
-        # uni2588 (Full Block): Drawn as 4 points. Points 1 and 2 are the right edge.
+
+        def get_right_side_indices(glyph_obj, right_x: int) -> List[int]:
+            indices = []
+            if hasattr(glyph_obj, "coordinates"):
+                for idx, (x, y) in enumerate(glyph_obj.coordinates):
+                    # Use a 1-unit tolerance threshold to catch minor float-to-int rounding variations
+                    if abs(x - right_x) <= 1:
+                        indices.append(idx)
+            return indices
+
+        # Stretch uni2588 (Full Block) to fill the full glyph.
         apply_variable_deltas(
-            font, "uni2588", zero_name, point_count=4, right_side_indices=[1, 2]
+            font,
+            "uni2588",
+            zero_name,
+            point_count=len(glyf_table["uni2588"].coordinates),
+            right_side_indices=get_right_side_indices(
+                glyf_table["uni2588"], skel_width
+            ),
         )
 
-        # uni258C (Right Cap): Point 0 and Point 1 represent the flat right edge canvas boundary line.
+        # Move uni2590 (Left Cap) to align with the right edge.
+        all_left_cap_indices = list(range(len(glyf_table["uni2590"].coordinates)))
         apply_variable_deltas(
-            font, "uni258C", zero_name, point_count=7, right_side_indices=[0, 1]
-        )
-
-        # uni2590 (Left Cap): Point 0 and Point 1 represent the flat right-hand side edge line.
-        apply_variable_deltas(
-            font, "uni2590", zero_name, point_count=7, right_side_indices=[0, 1]
+            font,
+            "uni2590",
+            zero_name,
+            point_count=len(glyf_table["uni2590"].coordinates),
+            right_side_indices=all_left_cap_indices,
         )
 
     # Re-link character mapping tables.
@@ -268,14 +311,14 @@ def main():
         for font_path in input_font_path.iterdir():
             if font_path.is_file() and font_path.suffix.lower() in [".ttf", ".woff"]:
                 save_path = out_dir / font_path.name
-                process_variable_font(args, font_path, save_path)
+                process_font(args, font_path, save_path)
     else:
         if input_font_path.suffix.lower() in [".ttf", ".woff"]:
             save_path = (
                 input_font_path.parent
                 / f"{input_font_path.stem}_skeleton{input_font_path.suffix}"
             )
-            process_variable_font(args, input_font_path, save_path)
+            process_font(args, input_font_path, save_path)
 
 
 if __name__ == "__main__":
