@@ -41,11 +41,50 @@ def draw_skeleton_shapes(
     y_bottom = int(skel_y_center - (skel_height / 2))
     x_left = 0
     x_right = skel_width
-    radius = int(skel_height * min(max(args.corner_round, 0.0), 0.5))
+    corner_round = float(min(max(args.corner_round, 0.0), 0.5))
+    radius = int(skel_height * corner_round)
 
-    # Magic constant for cubic-to-quadratic Bezier circles
-    kappa = 0.5522847498
-    offset = int(radius * kappa)
+    if corner_round == 0.5:
+        generated_glyphs = draw_semicircle_skeleton_shape_glyphs(
+            glyph_set,
+            y_top=y_top,
+            y_bottom=y_bottom,
+            x_left=x_left,
+            x_right=x_right,
+            radius=radius,
+        )
+    else:
+        generated_glyphs = draw_quadratic_skeleton_shape_glyphs(
+            glyph_set,
+            y_top=y_top,
+            y_bottom=y_bottom,
+            x_left=x_left,
+            x_right=x_right,
+            radius=radius,
+        )
+
+    return generated_glyphs, zero_glyph_name, radius
+
+
+def draw_semicircle_skeleton_shape_glyphs(
+    glyph_set: Dict[str, Glyph],
+    y_top: int,
+    y_bottom: int,
+    x_left: int,
+    x_right: int,
+    radius: int,
+):
+    generated_glyphs: Dict[str, Glyph] = {}
+
+    # Magic constant for 45-degree TrueType quadratic arcs: math.sqrt(2) - 1
+    # This maps the exact offset needed for the mid-point anchor positions
+    q_arc = 0.414213562
+
+    # Distance from the edge of the circle bounding box to the 45-degree anchor point
+    # coordinate offset: r * (1 - cos(45)) = r * (1 - 0.7071) ≈ 0.2929 * r
+    # control offset: r * sin(45) * (sqrt(2)-1) is factored cleanly below
+    chord_offset = int(radius * 0.2928932188)
+    control_offset = int(radius * q_arc)
 
     generated_glyphs: Dict[str, Glyph] = {}
 
@@ -59,45 +98,136 @@ def draw_skeleton_shapes(
     generated_glyphs["skel_fill"] = pen.glyph()
 
     # --- Variant 2: block_left (Left rounded cap) ---
+    # Curves on the left, flat on the right.
     pen = TTGlyphPen(glyph_set)
     pen.moveTo((x_right, y_top))
     pen.lineTo((x_right, y_bottom))
     pen.lineTo((x_left + radius, y_bottom))
-    # Approximation using quadratic Bezier points for TTF compatibility
+
+    # Bottom-Left Quadrant (split into two 45-degree steps)
     pen.qCurveTo(
-        (x_left + radius - offset, y_bottom),
-        (x_left, y_bottom + radius - offset),
-        (x_left, y_bottom + radius),
+        (x_left + radius - control_offset, y_bottom),  # Handle 1
+        (
+            x_left + chord_offset,
+            y_bottom + chord_offset,
+        ),  # 45-degree mid on-curve point
     )
+    pen.qCurveTo(
+        (x_left, y_bottom + radius - control_offset),  # Handle 2
+        (x_left, y_bottom + radius),  # End of quadrant
+    )
+
+    # Straight vertical line on left side (collapses cleanly to 0 length when radius = 0.5 * height)
     pen.lineTo((x_left, y_top - radius))
+
+    # Top-Left Quadrant (split into two 45-degree steps)
     pen.qCurveTo(
-        (x_left, y_top - radius + offset),
-        (x_left + radius - offset, y_top),
-        (x_left + radius, y_top),
+        (x_left, y_top - radius + control_offset),  # Handle 1
+        (x_left + chord_offset, y_top - chord_offset),  # 45-degree mid on-curve point
     )
+    pen.qCurveTo(
+        (x_left + radius - control_offset, y_top),  # Handle 2
+        (x_left + radius, y_top),  # End of quadrant
+    )
+
     pen.closePath()
     generated_glyphs["skel_left"] = pen.glyph()
 
     # --- Variant 3: block_right (Right rounded cap) ---
+    # Curves on the right, flat on the left.
     pen = TTGlyphPen(glyph_set)
     pen.moveTo((x_left, y_top))
     pen.lineTo((x_right - radius, y_top))
+
+    # Top-Right Quadrant (split into two 45-degree steps)
     pen.qCurveTo(
-        (x_right - radius + offset, y_top),
-        (x_right, y_top - radius + offset),
-        (x_right, y_top - radius),
+        (x_right - radius + control_offset, y_top),  # Handle 1
+        (x_right - chord_offset, y_top - chord_offset),  # 45-degree mid on-curve point
     )
+    pen.qCurveTo(
+        (x_right, y_top - radius + control_offset),  # Handle 2
+        (x_right, y_top - radius),  # End of quadrant
+    )
+
+    # Straight vertical line on right side
     pen.lineTo((x_right, y_bottom + radius))
+
+    # Bottom-Right Quadrant (split into two 45-degree steps)
     pen.qCurveTo(
-        (x_right, y_bottom + radius - offset),
-        (x_right - radius + offset, y_bottom),
-        (x_right - radius, y_bottom),
+        (x_right, y_bottom + radius - control_offset),  # Handle 1
+        (
+            x_right - chord_offset,
+            y_bottom + chord_offset,
+        ),  # 45-degree mid on-curve point
     )
+    pen.qCurveTo(
+        (x_right - radius + control_offset, y_bottom),  # Handle 2
+        (x_right - radius, y_bottom),  # End of quadrant
+    )
+
     pen.lineTo((x_left, y_bottom))
     pen.closePath()
     generated_glyphs["skel_right"] = pen.glyph()
 
-    return generated_glyphs, zero_glyph_name, radius
+    return generated_glyphs
+
+
+def draw_quadratic_skeleton_shape_glyphs(
+    glyph_set: Dict[str, Glyph],
+    y_top: int,
+    y_bottom: int,
+    x_left: int,
+    x_right: int,
+    radius: int,
+):
+    generated_glyphs: Dict[str, Glyph] = {}
+
+    # --- Variant 1: block_fill (Full block) ---
+    pen = TTGlyphPen(glyph_set)
+    pen.moveTo((x_left, y_top))
+    pen.lineTo((x_right, y_top))
+    pen.lineTo((x_right, y_bottom))
+    pen.lineTo((x_left, y_bottom))
+    pen.closePath()
+    generated_glyphs["skel_fill"] = pen.glyph()
+
+    # --- Variant 2: block_left (Left rounded cap) ---
+    # Has a flat right edge, curves are on the left side
+    pen = TTGlyphPen(glyph_set)
+    pen.moveTo((x_right, y_top))
+    pen.lineTo((x_right, y_bottom))
+    pen.lineTo((x_left + radius, y_bottom))
+
+    # Bottom-left corner arc: Control point is exactly at the virtual sharp corner (x_left, y_bottom)
+    pen.qCurveTo((x_left, y_bottom), (x_left, y_bottom + radius))
+
+    # Straight vertical line on the left side (only exists if radius is less than 0.5 * height)
+    pen.lineTo((x_left, y_top - radius))
+
+    # Top-left corner arc: Control point is exactly at (x_left, y_top)
+    pen.qCurveTo((x_left, y_top), (x_left + radius, y_top))
+    pen.closePath()
+    generated_glyphs["skel_left"] = pen.glyph()
+
+    # --- Variant 3: block_right (Right rounded cap) ---
+    # Has a flat left edge, curves are on the right side
+    pen = TTGlyphPen(glyph_set)
+    pen.moveTo((x_left, y_top))
+    pen.lineTo((x_right - radius, y_top))
+
+    # Top-right corner arc: Control point sits at (x_right, y_top)
+    pen.qCurveTo((x_right, y_top), (x_right, y_top - radius))
+
+    # Straight vertical line on the right side
+    pen.lineTo((x_right, y_bottom + radius))
+
+    # Bottom-right corner arc: Control point sits at (x_right, y_bottom)
+    pen.qCurveTo((x_right, y_bottom), (x_right - radius, y_bottom))
+    pen.lineTo((x_left, y_bottom))
+    pen.closePath()
+    generated_glyphs["skel_right"] = pen.glyph()
+
+    return generated_glyphs
 
 
 def apply_variable_deltas(
@@ -266,7 +396,7 @@ def process_font(args: argparse.Namespace, font_path: Path, save_path: Path):
             zero_name,
             point_count=len(glyf_table["uni2590"].coordinates),
             right_side_indices=get_right_side_indices(
-                glyf_table["uni2588"], skel_width
+                glyf_table["uni2590"], skel_width
             ),
         )
 
@@ -311,7 +441,7 @@ def main():
     parser.add_argument(
         "--corner-round",
         type=float,
-        default=0.5,
+        default=0.45,
         help="Corner rounding radius as percentage of visual bar height (0.0 to 0.5)",
     )
     args = parser.parse_args()
