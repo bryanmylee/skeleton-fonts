@@ -1,23 +1,9 @@
 
 <style>
-  /* @font-face {
+  @font-face {
     font-family: "Inter";
-    src: url("../fonts/Inter-VariableFont_opsz,wght.ttf") format("truetype-variations");
+    src: url("../fonts_skeleton/Inter-VariableFont_opsz,wght.ttf") format("truetype-variations");
     font-weight: 100 900;
-    font-style: normal;
-  } */
-
-  @font-face {
-    font-family: "Inter";
-    src: url("../fonts_skeleton/Inter-Regular.ttf") format("truetype");
-    font-weight: 400;
-    font-style: normal;
-  }
-
-  @font-face {
-    font-family: "Inter";
-    src: url("../fonts_skeleton/Inter-Bold.ttf") format("truetype");
-    font-weight: 800;
     font-style: normal;
   }
 
@@ -116,7 +102,7 @@
     </div>
     <div class="ctrl-group">
       <div class="ctrl-label">Weight <span id="wt-out">400</span></div>
-      <input type="range" id="wt" min="100" max="900" step="100" value="400">
+      <input type="range" id="wt" min="100" max="900" step="1" value="400">
     </div>
     <div class="ctrl-group" style="justify-content: flex-end;">
       <label style="font-size:13px; display:flex; align-items:center; gap:8px; cursor:pointer;">
@@ -190,17 +176,6 @@
 </div>
 
 <script>
-  const weights = [100, 200, 300, 400, 500, 600, 700, 800, 900];
-  const weightLabels = {100:'Thin',200:'Extra Light',300:'Light',400:'Regular',500:'Medium',600:'Semi Bold',700:'Bold',800:'Extra Bold',900:'Black'};
-  const grid = document.getElementById('weight-grid');
-
-  weights.forEach(w => {
-    const div = document.createElement('div');
-    div.className = 'weight-swatch';
-    div.innerHTML = `<div class="wlabel" style="font-weight:${w};">${w} — ${weightLabels[w]}</div><div class="skel" style="font-weight:${w}; font-size:16px;">▐████████████████▌<br>▐██████████▌</div>`;
-    grid.appendChild(div);
-  });
-
   const skels = document.querySelectorAll('.skel');
   const sz = document.getElementById('sz');
   const lh = document.getElementById('lh');
@@ -223,12 +198,17 @@
   wt.addEventListener('input', () => {
     skels.forEach(el => el.style.fontWeight = wt.value);
     wtOut.textContent = wt.value;
-    document.querySelectorAll('#weight-grid .wlabel').forEach((label, i) => {
-      const w = weights[i];
-      label.style.fontWeight = w == parseInt(wt.value) ? '600' : '';
-      label.style.color = w == parseInt(wt.value) ? 'var(--color-text-primary)' : '';
-      label.closest('.weight-swatch').style.borderColor = w == parseInt(wt.value) ? 'var(--color-border-primary)' : '';
-    });
+  });
+
+  const weights = [100, 200, 300, 400, 500, 600, 700, 800, 900];
+  const weightLabels = {100:'Thin',200:'Extra Light',300:'Light',400:'Regular',500:'Medium',600:'Semi Bold',700:'Bold',800:'Extra Bold',900:'Black'};
+  const grid = document.getElementById('weight-grid');
+
+  weights.forEach(w => {
+    const div = document.createElement('div');
+    div.className = 'weight-swatch';
+    div.innerHTML = `<div class="wlabel" style="font-weight:${w};">${w} — ${weightLabels[w]}</div><div class="skel" style="font-weight:${w}; font-size:16px;">▐████████████████▌<br>▐██████████▌</div>`;
+    grid.appendChild(div);
   });
 
   anim.addEventListener('change', () => {
