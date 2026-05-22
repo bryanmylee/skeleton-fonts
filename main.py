@@ -279,7 +279,10 @@ def main():
     parser = argparse.ArgumentParser(
         description="Inject adaptive skeleton loading bars into an existing font file."
     )
-    parser.add_argument("input_font", help="Path to input TTF/OTF font file")
+    parser.add_argument(
+        "input_font",
+        help="Path to input TTF/WOFF font file or directory containing font files",
+    )
     parser.add_argument(
         "--height-scale",
         type=float,
