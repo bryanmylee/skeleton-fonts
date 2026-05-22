@@ -9,7 +9,7 @@ from fontTools.pens.ttGlyphPen import TTGlyphPen
 
 def draw_skeleton_shapes(
     font: TTFont, args: argparse.Namespace
-) -> Tuple[Dict[str, Glyph], str]:
+) -> Tuple[Dict[str, Glyph], str, int]:
     """
     Calculates metrics based on character '0' and generates TrueType glyph definitions.
     """
@@ -41,11 +41,11 @@ def draw_skeleton_shapes(
     y_bottom = int(skel_y_center - (skel_height / 2))
     x_left = 0
     x_right = skel_width
-    r = int(skel_height * min(max(args.corner_round, 0.0), 0.5))
+    radius = int(skel_height * min(max(args.corner_round, 0.0), 0.5))
 
     # Magic constant for cubic-to-quadratic Bezier circles
     kappa = 0.5522847498
-    offset = int(r * kappa)
+    offset = int(radius * kappa)
 
     generated_glyphs: Dict[str, Glyph] = {}
 
@@ -62,18 +62,18 @@ def draw_skeleton_shapes(
     pen = TTGlyphPen(glyph_set)
     pen.moveTo((x_right, y_top))
     pen.lineTo((x_right, y_bottom))
-    pen.lineTo((x_left + r, y_bottom))
+    pen.lineTo((x_left + radius, y_bottom))
     # Approximation using quadratic Bezier points for TTF compatibility
     pen.qCurveTo(
-        (x_left + r - offset, y_bottom),
-        (x_left, y_bottom + r - offset),
-        (x_left, y_bottom + r),
+        (x_left + radius - offset, y_bottom),
+        (x_left, y_bottom + radius - offset),
+        (x_left, y_bottom + radius),
     )
-    pen.lineTo((x_left, y_top - r))
+    pen.lineTo((x_left, y_top - radius))
     pen.qCurveTo(
-        (x_left, y_top - r + offset),
-        (x_left + r - offset, y_top),
-        (x_left + r, y_top),
+        (x_left, y_top - radius + offset),
+        (x_left + radius - offset, y_top),
+        (x_left + radius, y_top),
     )
     pen.closePath()
     generated_glyphs["skel_left"] = pen.glyph()
@@ -81,23 +81,23 @@ def draw_skeleton_shapes(
     # --- Variant 3: block_right (Right rounded cap) ---
     pen = TTGlyphPen(glyph_set)
     pen.moveTo((x_left, y_top))
-    pen.lineTo((x_right - r, y_top))
+    pen.lineTo((x_right - radius, y_top))
     pen.qCurveTo(
-        (x_right - r + offset, y_top),
-        (x_right, y_top - r + offset),
-        (x_right, y_top - r),
+        (x_right - radius + offset, y_top),
+        (x_right, y_top - radius + offset),
+        (x_right, y_top - radius),
     )
-    pen.lineTo((x_right, y_bottom + r))
+    pen.lineTo((x_right, y_bottom + radius))
     pen.qCurveTo(
-        (x_right, y_bottom + r - offset),
-        (x_right - r + offset, y_bottom),
-        (x_right - r, y_bottom),
+        (x_right, y_bottom + radius - offset),
+        (x_right - radius + offset, y_bottom),
+        (x_right - radius, y_bottom),
     )
     pen.lineTo((x_left, y_bottom))
     pen.closePath()
     generated_glyphs["skel_right"] = pen.glyph()
 
-    return generated_glyphs, zero_glyph_name
+    return generated_glyphs, zero_glyph_name, radius
 
 
 def apply_variable_deltas(
@@ -207,7 +207,7 @@ def process_font(args: argparse.Namespace, font_path: Path, save_path: Path):
     hmtx_table = font["hmtx"]
 
     # Generate the math-exact static loading geometries.
-    new_glyphs, zero_name = draw_skeleton_shapes(font, args)
+    new_glyphs, zero_name, radius = draw_skeleton_shapes(font, args)
 
     # Assign base outlines.
     # Full Block █
@@ -231,8 +231,9 @@ def process_font(args: argparse.Namespace, font_path: Path, save_path: Path):
             indices = []
             if hasattr(glyph_obj, "coordinates"):
                 for idx, (x, y) in enumerate(glyph_obj.coordinates):
-                    # Use a 1-unit tolerance threshold to catch minor float-to-int rounding variations
-                    if abs(x - right_x) <= 1:
+                    # Use the radius + 1-unit tolerance threshold to move the
+                    # entire rounded cap instead of stretching the cap.
+                    if abs(x - right_x) <= radius + 1:
                         indices.append(idx)
             return indices
 
@@ -247,16 +248,16 @@ def process_font(args: argparse.Namespace, font_path: Path, save_path: Path):
             ),
         )
 
-        # # Stretch uni258C (Right Cap) to fill the full glyph.
-        # apply_variable_deltas(
-        #     font,
-        #     "uni258C",
-        #     zero_name,
-        #     point_count=len(glyf_table["uni258C"].coordinates),
-        #     right_side_indices=get_right_side_indices(
-        #         glyf_table["uni258C"], skel_width
-        #     ),
-        # )
+        # Stretch uni258C (Right Cap) to fill the full glyph.
+        apply_variable_deltas(
+            font,
+            "uni258C",
+            zero_name,
+            point_count=len(glyf_table["uni258C"].coordinates),
+            right_side_indices=get_right_side_indices(
+                glyf_table["uni258C"], skel_width
+            ),
+        )
 
         # Stretch uni2588 (Left Cap) to fill the full glyph.
         apply_variable_deltas(
