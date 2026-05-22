@@ -2,6 +2,7 @@ import argparse
 from enum import Enum
 import fontforge
 import os
+from pathlib import Path
 from typing import List, Literal, Tuple
 
 
@@ -204,11 +205,29 @@ def main():
 
     args = parser.parse_args()
 
-    if not os.path.exists(args.input_font):
+    input_font_path = Path(args.input_font)
+    if not input_font_path.exists():
         print(f"Error: Font file '{args.input_font}' not found.")
         return
 
-    font = fontforge.open(args.input_font)
+    if input_font_path.is_dir():
+        os.makedirs(f"{input_font_path}_skeleton", exist_ok=True)
+        for font_path in input_font_path.iterdir():
+            if font_path.is_file():
+                save_path = (
+                    f"{input_font_path}_skeleton/{font_path.stem}{font_path.suffix}"
+                )
+                process_font_file(args, font_path, save_path)
+    else:
+        save_path = f"{input_font_path.parent}/{input_font_path.stem}_skeleton{input_font_path.suffix}"
+        process_font_file(args, input_font_path, save_path)
+
+
+def process_font_file(args: argparse.Namespace, font_file: Path, save_path: str):
+    try:
+        font = fontforge.open(f"{font_file}")
+    except Exception:
+        return
 
     # Target character '0' (U+0030) to establish standard line context dimensions
     if 0x30 in font:
@@ -276,29 +295,26 @@ def main():
         skel_y_center,
         skel_radius,
     )
+
     # Draw variants
-    for variant in variants:
-        draw_skeleton_glyph(
-            font[variant],
-            variant,
-            skel_width,
-            skel_height,
-            skel_y_center,
-            skel_radius,
-        )
+    # for variant in variants:
+    #     draw_skeleton_glyph(
+    #         font[variant],
+    #         variant,
+    #         skel_width,
+    #         skel_height,
+    #         skel_y_center,
+    #         skel_radius,
+    #     )
 
-    define_ligatures(font)
+    # TODO Should we fix this?
+    # define_ligatures(font)
 
-    # Generate finalized font assets
-    base_name, _ = os.path.splitext(args.input_font)
-    output_ttf = f"{base_name}_skeleton.ttf"
-    output_woff2 = f"{base_name}_skeleton.woff2"
-
-    font.generate(output_ttf)
-    font.generate(output_woff2)
+    font.generate(save_path)
 
     font.close()
-    print(f"Success! Outputs created:\n - {output_ttf}\n - {output_woff2}")
+
+    print(f"Success! Outputs created:\n - {save_path}")
 
 
 def define_ligatures(font):
