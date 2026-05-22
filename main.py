@@ -247,14 +247,26 @@ def process_font(args: argparse.Namespace, font_path: Path, save_path: Path):
             ),
         )
 
-        # Move uni2590 (Left Cap) to align with the right edge.
-        all_left_cap_indices = list(range(len(glyf_table["uni2590"].coordinates)))
+        # # Stretch uni258C (Right Cap) to fill the full glyph.
+        # apply_variable_deltas(
+        #     font,
+        #     "uni258C",
+        #     zero_name,
+        #     point_count=len(glyf_table["uni258C"].coordinates),
+        #     right_side_indices=get_right_side_indices(
+        #         glyf_table["uni258C"], skel_width
+        #     ),
+        # )
+
+        # Stretch uni2588 (Left Cap) to fill the full glyph.
         apply_variable_deltas(
             font,
             "uni2590",
             zero_name,
             point_count=len(glyf_table["uni2590"].coordinates),
-            right_side_indices=all_left_cap_indices,
+            right_side_indices=get_right_side_indices(
+                glyf_table["uni2588"], skel_width
+            ),
         )
 
     # Re-link character mapping tables.
