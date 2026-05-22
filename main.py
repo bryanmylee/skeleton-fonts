@@ -1,14 +1,15 @@
 import argparse
 from pathlib import Path
-from typing import cast, Dict, Tuple
+from typing import cast, Dict, List, Tuple
 from fontTools.ttLib import TTFont
 from fontTools.ttLib.tables._g_l_y_f import Glyph
+from fontTools.ttLib.tables.TupleVariation import TupleVariation
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 
 
 def draw_skeleton_shapes(
     font: TTFont, args: argparse.Namespace
-) -> Dict[str, Tuple[Glyph, int]]:
+) -> Tuple[Dict[str, Glyph], str]:
     """
     Calculates metrics based on character '0' and generates TrueType glyph definitions.
     """
@@ -46,7 +47,7 @@ def draw_skeleton_shapes(
     kappa = 0.5522847498
     offset = int(r * kappa)
 
-    generated_glyphs: Dict[str, Tuple[Glyph, int]] = {}
+    generated_glyphs: Dict[str, Glyph] = {}
 
     # --- Variant 1: block_fill (Full block) ---
     pen = TTGlyphPen(glyph_set)
@@ -55,7 +56,7 @@ def draw_skeleton_shapes(
     pen.lineTo((x_right, y_bottom))
     pen.lineTo((x_left, y_bottom))
     pen.closePath()
-    generated_glyphs["skel_fill"] = (pen.glyph(), skel_width)
+    generated_glyphs["skel_fill"] = pen.glyph()
 
     # --- Variant 2: block_left (Left rounded cap) ---
     pen = TTGlyphPen(glyph_set)
@@ -75,7 +76,7 @@ def draw_skeleton_shapes(
         (x_left + r, y_top),
     )
     pen.closePath()
-    generated_glyphs["skel_left"] = (pen.glyph(), skel_width)
+    generated_glyphs["skel_left"] = pen.glyph()
 
     # --- Variant 3: block_right (Right rounded cap) ---
     pen = TTGlyphPen(glyph_set)
@@ -94,9 +95,70 @@ def draw_skeleton_shapes(
     )
     pen.lineTo((x_left, y_bottom))
     pen.closePath()
-    generated_glyphs["skel_right"] = (pen.glyph(), skel_width)
+    generated_glyphs["skel_right"] = pen.glyph()
 
-    return generated_glyphs
+    return generated_glyphs, zero_glyph_name
+
+
+def apply_variable_deltas(
+    font: TTFont,
+    target_glyph_name: str,
+    zero_glyph_name: str,
+    point_count: int,
+    right_side_indices: List[int],
+):
+    """
+    Safely calculates and binds point-matched variations for new geometries
+    based on changes to the baseline character's overall advance width.
+    """
+    if "gvar" not in font or zero_glyph_name not in font["gvar"].variations:
+        return
+    gvar_table = font["gvar"]
+    zero_variations = cast(List[TupleVariation], gvar_table.variations[zero_glyph_name])
+    new_variations: List[TupleVariation] = []
+
+    for var in zero_variations:
+        # TrueType fonts store phantom points at the end of the coordinates
+        # tracking advance metrics. The first phantom point (point_count + 0)
+        # tracks the horizontal advance width change. We find out how much the
+        # width changes for this master axis variation state.
+        delta_width = 0
+        if var.coordinates:
+            # Look at the horizontal delta mapping of the advance width phantom
+            # point. In fontTools, phantom points come right after the master
+            # outline points in gvar.
+            phantom_idx = len(var.coordinates) - 4
+            if (
+                0 <= phantom_idx < len(var.coordinates)
+                and var.coordinates[phantom_idx] is not None
+            ):
+                coord = var.coordinates[phantom_idx]
+                if type(coord) is tuple:
+                    delta_width = coord[0]
+
+        if delta_width == 0:
+            continue
+
+        # Create a completely clean structural coordinate delta map custom
+        # built for our point setup. Every index initialized to (0, 0) means it
+        # stays completely stationary on that axis.
+        coords = [(0, 0)] * point_count
+
+        # Apply the exact master width expansion delta exclusively to the
+        # right-side vector points
+        for idx in right_side_indices:
+            if idx < point_count:
+                coords[idx] = (delta_width, 0)
+
+        # Append phantom points to our delta array so formatting doesn't throw
+        # compilation exceptions.
+        coords.extend([(0, 0), (delta_width, 0), (0, 0), (0, 0)])
+
+        new_var = TupleVariation(var.axes, coords)
+        new_variations.append(new_var)
+
+    if new_variations:
+        gvar_table.variations[target_glyph_name] = new_variations
 
 
 def process_variable_font(args: argparse.Namespace, font_path: Path, save_path: Path):
@@ -106,7 +168,7 @@ def process_variable_font(args: argparse.Namespace, font_path: Path, save_path: 
         print(f"Skipping {font_path.name}: Could not parse file. Details: {e}")
         return
 
-    # Enforce standard TrueType Variable configuration check
+    # Enforce standard TrueType Variable configuration check.
     if "glyf" not in font:
         print(
             f"Skipping {font_path.name}: Outlines are PostScript (CFF2). This fix targets standard TTF variable formats."
@@ -117,23 +179,42 @@ def process_variable_font(args: argparse.Namespace, font_path: Path, save_path: 
     glyf_table = font["glyf"]
     hmtx_table = font["hmtx"]
 
-    # 1. Generate the math-exact static loading geometries
-    new_glyphs = draw_skeleton_shapes(font, args)
+    # Generate the math-exact static loading geometries.
+    new_glyphs, zero_name = draw_skeleton_shapes(font, args)
 
-    # 2. Inject vector elements seamlessly into glyf and metrics tables
-    glyf_table["uni2588"] = new_glyphs["skel_fill"][0]  # Full Block █
-    glyf_table["uni258C"] = new_glyphs["skel_right"][
-        0
-    ]  # Left Half Block ▌ (Used as right-cap)
-    glyf_table["uni2590"] = new_glyphs["skel_left"][
-        0
-    ]  # Right Half Block ▐ (Used as left-cap)
+    # Assign base outlines.
+    # Full Block █
+    glyf_table["uni2588"] = new_glyphs["skel_fill"]
+    # Left Half Block ▌ (Used as right-cap)
+    glyf_table["uni258C"] = new_glyphs["skel_right"]
+    # Right Half Block ▐ (Used as left-cap)
+    glyf_table["uni2590"] = new_glyphs["skel_left"]
 
-    hmtx_table["uni2588"] = (new_glyphs["skel_fill"][1], 0)
-    hmtx_table["uni258C"] = (new_glyphs["skel_right"][1], 0)
-    hmtx_table["uni2590"] = (new_glyphs["skel_left"][1], 0)
+    # Setup automatic uniform baseline advanced tracking metrics.
+    zero_advance_width = cast(int, hmtx_table[zero_name][0])
+    hmtx_table["uni2588"] = (zero_advance_width, 0)
+    hmtx_table["uni258C"] = (zero_advance_width, 0)
+    hmtx_table["uni2590"] = (zero_advance_width, 0)
 
-    # 3. Re-link character mapping tables safely
+    # Apply precise, structural deltas to the right-side vertices of our new shapes.
+    # We pass the exact indices of points that sit on the right edge of our geometry.
+    if "gvar" in font:
+        # uni2588 (Full Block): Drawn as 4 points. Points 1 and 2 are the right edge.
+        apply_variable_deltas(
+            font, "uni2588", zero_name, point_count=4, right_side_indices=[1, 2]
+        )
+
+        # uni258C (Right Cap): Point 0 and Point 1 represent the flat right edge canvas boundary line.
+        apply_variable_deltas(
+            font, "uni258C", zero_name, point_count=7, right_side_indices=[0, 1]
+        )
+
+        # uni2590 (Left Cap): Point 0 and Point 1 represent the flat right-hand side edge line.
+        apply_variable_deltas(
+            font, "uni2590", zero_name, point_count=7, right_side_indices=[0, 1]
+        )
+
+    # Re-link character mapping tables.
     cmap = font.getBestCmap()
     if cmap is None:
         print(f"Skipping {font_path.name}: Font cmap not available.")
@@ -143,7 +224,7 @@ def process_variable_font(args: argparse.Namespace, font_path: Path, save_path: 
     cmap[0x258C] = "uni258C"
     cmap[0x2590] = "uni2590"
 
-    # 4. Save out file
+    # Save out file.
     if save_path.suffix.lower() == ".woff2":
         font.flavor = "woff2"
     font.save(save_path)
