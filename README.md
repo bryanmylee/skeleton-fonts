@@ -1,6 +1,8 @@
+<img width="960" height="124" alt="title" src="https://github.com/user-attachments/assets/8eb55c51-fa92-44d8-b265-3410bfd53fa6" />
+
 # skeleton-fonts
 
-Generate loading skeletons directly from fonts.
+Generate loading skeletons from your fonts.
 
 `skeleton-fonts` modifies a font’s block characters (`▐` / `█` / `▌`) to create
 loading skeleton placeholders that naturally match text layout, including
@@ -45,9 +47,7 @@ Given a directory `fonts` containing font files.
 uv run main.py fonts
 ```
 
-```
-TODO insert example
-```
+<img width="932" height="308" alt="demo-default" src="https://github.com/user-attachments/assets/08e36a49-5dfa-464e-a95f-3855feaf7a32" />
 
 ### Fully rounded end-caps
 
@@ -55,9 +55,7 @@ TODO insert example
 uv run main.py fonts --corner-round 0.5
 ```
 
-```
-TODO insert example
-```
+<img width="932" height="308" alt="demo-corner-0 5" src="https://github.com/user-attachments/assets/76118be3-27e8-4c34-9cd6-78e709ac6b2f" />
 
 ### Thick skeleton
 
@@ -65,10 +63,7 @@ TODO insert example
 uv run main.py fonts --height-scale 0.95
 ```
 
-```
-TODO insert example
-```
-
+<img width="932" height="308" alt="demo-height-0 95" src="https://github.com/user-attachments/assets/bbb25cba-6207-4332-ae85-35939b142c48" />
 
 ### Thin skeleton
 
@@ -76,9 +71,7 @@ TODO insert example
 uv run main.py fonts --height-scale 0.2 --corner-radius 0.5
 ```
 
-```
-TODO insert example
-```
+<img width="932" height="308" alt="demo-height-0 2-corner-0 5" src="https://github.com/user-attachments/assets/ad20a2ce-5556-4e0a-ab79-7235d9ce6db4" />
 
 ## Why?
 
@@ -128,9 +121,7 @@ These glyphs are reshaped into skeleton primitives:
 
 The block above renders as:
 
-```
-TODO insert example of loading block.
-```
+<img width="702" height="88" alt="demo-render" src="https://github.com/user-attachments/assets/fdb5cfac-fc6c-4bcd-88a0-d10c9f6fe69b" />
 
 Because glyph dimensions come from the font itself, placeholders inherit typography metrics automatically.
 
