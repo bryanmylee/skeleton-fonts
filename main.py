@@ -1,10 +1,10 @@
 import argparse
 from pathlib import Path
 from typing import cast, Dict, List, Tuple
+from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.ttLib import TTFont
 from fontTools.ttLib.tables._g_l_y_f import Glyph
 from fontTools.ttLib.tables.TupleVariation import TupleVariation
-from fontTools.pens.ttGlyphPen import TTGlyphPen
 
 
 def draw_skeleton_shapes(
@@ -110,9 +110,8 @@ def draw_skeleton_shapes(
 
                 # Append explicit phantom points for CoreText.
                 # [Left Side Bearing, Right Advance Width, Top Side Bearing, Bottom Advance Height]
-                # For all variations, the layout container metrics scale
-                # exactly like the em dash.
                 coords.extend([(delta_left, 0), (delta_right, 0), (0, 0), (0, 0)])
+                # coords.extend([(0, 0), (0, 0), (0, 0), (0, 0)])
                 new_vars.append(TupleVariation(var.axes, coords))
 
             generated_variations[variant_key] = new_vars
@@ -284,6 +283,55 @@ def draw_quadratic_skeleton_shape_glyphs(
     return generated_glyphs
 
 
+def fix_hvar(font: TTFont, emdash_name: str):
+    """
+    Finds the HVAR width variation mapping index for the base emdash glyph and
+    copies it to the newly injected skeleton loading bar glyphs.
+    """
+    if "HVAR" not in font:
+        return
+
+    hvar_table = font["HVAR"].table
+    glyph_order = font.getGlyphOrder()
+    target_glyphs = ("uni2588", "uni258C", "uni2590")
+
+    if hasattr(hvar_table, "VarIdxMap"):
+        print("Fixing VarIdxMap")
+        var_idx_map = hvar_table.VarIdxMap
+        if emdash_name in var_idx_map.mapping:
+            emdash_idx = var_idx_map.mapping[emdash_name]
+            for glyph in target_glyphs:
+                if glyph in glyph_order:
+                    var_idx_map.mapping[glyph] = emdash_idx
+
+    if hasattr(hvar_table, "AdvWidthMap") and hvar_table.AdvWidthMap is not None:
+        width_map = hvar_table.AdvWidthMap.mapping
+        if emdash_name in width_map:
+            emdash_idx = width_map[emdash_name]
+            for glyph in target_glyphs:
+                if glyph in glyph_order:
+                    width_map[glyph] = emdash_idx
+
+    # Side-bearings maps are optional components in HVAR.
+    # If present, map them to the emdash values too to ensure layout engines
+    # don't get confused by shifting bounding boxes.
+    if hasattr(hvar_table, "LsbMap") and hvar_table.LsbMap is not None:
+        lsb_map = hvar_table.LsbMap.mapping
+        if emdash_name in lsb_map:
+            emdash_lsb_idx = lsb_map[emdash_name]
+            for glyph in target_glyphs:
+                if glyph in glyph_order:
+                    lsb_map[glyph] = emdash_lsb_idx
+
+    if hasattr(hvar_table, "RsbMap") and hvar_table.RsbMap is not None:
+        rsb_map = hvar_table.RsbMap.mapping
+        if emdash_name in rsb_map:
+            emdash_rsb_idx = rsb_map[emdash_name]
+            for glyph in target_glyphs:
+                if glyph in glyph_order:
+                    rsb_map[glyph] = emdash_rsb_idx
+
+
 def process_font(args: argparse.Namespace, font_path: Path, save_path: Path):
     try:
         font = TTFont(font_path)
@@ -318,6 +366,8 @@ def process_font(args: argparse.Namespace, font_path: Path, save_path: Path):
     # Map the variation matrices.
     if "gvar" in font and new_variations:
         gvar_table = font["gvar"]
+
+        # Adapt tracking deltas from emdash.
         gvar_table.variations["uni2588"] = new_variations["skel_fill"]
         gvar_table.variations["uni258C"] = new_variations["skel_right"]
         gvar_table.variations["uni2590"] = new_variations["skel_left"]
@@ -326,6 +376,9 @@ def process_font(args: argparse.Namespace, font_path: Path, save_path: Path):
         if "maxp" in font and hasattr(font["maxp"], "maxPoints"):
             max_pts = max(len(g.coordinates) for g in new_glyphs.values())
             font["maxp"].maxPoints = max(cast(int, font["maxp"].maxPoints), max_pts + 4)
+
+        # Update metric overrides
+        fix_hvar(font, emdash_name)
 
     # Re-link character mapping tables.
     cmap = font.getBestCmap()
