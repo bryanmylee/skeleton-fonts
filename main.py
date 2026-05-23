@@ -296,26 +296,38 @@ def apply_variable_deltas(
         if delta_width == 0:
             continue
 
-        # Create a completely clean structural coordinate delta map custom
-        # built for our point setup. Every index initialized to (0, 0) means it
-        # stays completely stationary on that axis.
+        # Force structural cast to integer to pass iOS's CoreText validation
+        # parameters
+        int_delta_width = int(round(delta_width))
+
+        # CoreText requirement: Build out precise coordinate arrays explicitly
+        # mapping base points AND the 4 standard OpenType phantom points
+        # structurally.
         coords = [(0, 0)] * point_count
 
-        # Apply the exact master width expansion delta exclusively to the
-        # right-side vector points
+        # Map changes cleanly across targeted vector points
         for idx in right_side_indices:
             if idx < point_count:
-                coords[idx] = (delta_width, 0)
+                coords[idx] = (int_delta_width, 0)
 
-        # Append phantom points to our delta array so formatting doesn't throw
-        # compilation exceptions.
-        coords.extend([(0, 0), (delta_width, 0), (0, 0), (0, 0)])
+        # CoreText requirement: Explicitly hand-compile the trailing 4
+        # structural phantom points. [Left Side Bearing, Right Advance Width,
+        # Top Side Bearing, Bottom Advance Height]
+        coords.extend([(0, 0), (int_delta_width, 0), (0, 0), (0, 0)])
 
         new_var = TupleVariation(var.axes, coords)
         new_variations.append(new_var)
 
     if new_variations:
         gvar_table.variations[target_glyph_name] = new_variations
+        # Fix maxp Table Bounds: Make sure CoreText allocates enough structural
+        # memory to parse our injected variation maps.
+        if "maxp" in font:
+            maxp = font["maxp"]
+            # Enforce that maxPoints matches or exceeds the raw geometry
+            # constraints we added
+            if hasattr(maxp, "maxPoints"):
+                maxp.maxPoints = max(cast(int, maxp.maxPoints), point_count + 4)
 
 
 def process_font(args: argparse.Namespace, font_path: Path, save_path: Path):
