@@ -395,7 +395,7 @@ def process_font(args: argparse.Namespace, font_path: Path, save_path: Path):
         font.flavor = "woff2"
     font.save(save_path)
     font.close()
-    print(f"Success! Output Variable Font created at:\n - {save_path}")
+    print(f"Success! Output font created at:\n - {save_path}")
 
 
 def main():
@@ -405,6 +405,9 @@ def main():
     parser.add_argument(
         "input_font",
         help="Path to input TTF/WOFF font file or directory containing font files",
+    )
+    parser.add_argument(
+        "--output", type=str, help="Output file or directory for updated fonts"
     )
     parser.add_argument(
         "--height-scale",
@@ -432,19 +435,35 @@ def main():
         return
 
     if input_font_path.is_dir():
-        out_dir = Path(f"{input_font_path}_skeleton")
+        out_dir = (
+            Path(args.output)
+            if args.output is not None
+            else Path(f"{input_font_path}_skeleton")
+        )
         out_dir.mkdir(exist_ok=True)
         for font_path in input_font_path.iterdir():
-            if font_path.is_file() and font_path.suffix.lower() in [".ttf", ".woff2"]:
+            if font_path.is_file() and font_path.suffix.lower() in (
+                ".ttf",
+                ".otf",
+                ".woff2",
+            ):
                 save_path = out_dir / font_path.name
                 process_font(args, font_path, save_path)
+            else:
+                print(f"Unsupported font file: {font_path}")
     else:
-        if input_font_path.suffix.lower() in [".ttf", ".woff2"]:
+        if input_font_path.suffix.lower() in [".ttf", ".otf", ".woff2"]:
             save_path = (
-                input_font_path.parent
-                / f"{input_font_path.stem}_skeleton{input_font_path.suffix}"
+                Path(args.output)
+                if args.output is not None
+                else (
+                    input_font_path.parent
+                    / f"{input_font_path.stem}_skeleton{input_font_path.suffix}"
+                )
             )
             process_font(args, input_font_path, save_path)
+        else:
+            print(f"Unsupported font file: {input_font_path}")
 
 
 if __name__ == "__main__":
