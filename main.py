@@ -329,6 +329,20 @@ def apply_variable_deltas(
             if hasattr(maxp, "maxPoints"):
                 maxp.maxPoints = max(cast(int, maxp.maxPoints), point_count + 4)
 
+        # Android's FreeType uses the HVAR table to track variable layout
+        # bounds. Ensure our modified glyph links up to the same width delta
+        # mapping index as the '0' character we are copying layout behaviors
+        # from.
+        if "HVAR" in font:
+            hvar_table = font["HVAR"].table
+            if hasattr(hvar_table, "VarIdxMap") and hvar_table.VarIdxMap is not None:
+                # If '0' has a dedicated index mapping in the layout variations
+                # store, point our new target glyph directly to that exact same
+                # index link!
+                if zero_glyph_name in hvar_table.VarIdxMap.mapping:
+                    zero_metric_index = hvar_table.VarIdxMap.mapping[zero_glyph_name]
+                    hvar_table.VarIdxMap.mapping[target_glyph_name] = zero_metric_index
+
 
 def process_font(args: argparse.Namespace, font_path: Path, save_path: Path):
     try:

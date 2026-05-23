@@ -1,9 +1,23 @@
 <style>
-  @font-face {
+  /* @font-face {
     font-family: "Inter";
     src: url("../fonts_skeleton/Inter-VariableFont_opsz,wght.ttf")
       format("truetype-variations");
     font-weight: 100 900;
+    font-style: normal;
+  } */
+
+  @font-face {
+    font-family: "Inter";
+    src: url("../fonts_skeleton/Inter-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+  }
+
+  @font-face {
+    font-family: "Inter";
+    src: url("../fonts_skeleton/Inter-Bold.ttf") format("truetype");
+    font-weight: 700;
     font-style: normal;
   }
 
@@ -130,6 +144,25 @@
   .skel.animate {
     animation: shimmer 1.6s ease-in-out infinite;
   }
+  
+  .title {
+    font-size: 24px;
+    font-weight: 700;
+    text-align: center;
+    /* line-height: 0.95em; */
+  }
+  
+  .subtitle {
+    font-size: 12px;
+    font-weight: 400;
+    text-align: center;
+    color: var(--color-text-secondary);
+    /* text-transform: uppercase; */
+    /* line-height: 0.95em; */
+  }
+  .subtitle.skel {
+    color: var(--color-skel);
+  }
 
   .user.name {
     font-size: 24px;
@@ -170,6 +203,18 @@
 
 <div class="demo-root">
   <h1>skeleton-fonts</h1>
+
+  <div class="card">
+    <div class="loading">
+      <p class="title skel animate">▐█████▌ ▐███▌</p>
+      <p class="subtitle skel animate">▐████▌ ▐██████▌ ▐█▌ ▐████▌ ▐████▌</p>
+    </div>
+    <div class="loaded">
+      <p class="title">Skeleton Fonts</p>
+      <p class="subtitle">Text loading skeletons without vertical layout shifts</p>
+    </div>
+  </div>
+
 
   <p class="sub">
     Type <code>█</code> (U+2588), <code>▌</code> (U+258C), and
@@ -236,7 +281,7 @@
   weights.forEach((w) => {
     const div = document.createElement("div");
     div.className = "weight-swatch";
-    div.innerHTML = `<div class="wlabel" style="font-weight:${w};">${w} — ${weightLabels[w]}</div><div class="skel animate" style="font-weight:${w}; font-size:16px;">▐█████████████▌<br>▐███████▌</div>`;
+    div.innerHTML = `<div class="wlabel" style="font-weight:${w};">${w} — ${weightLabels[w]}</div><div class="skel animate" style="font-weight:${w}; font-size:16px;">▐█████████████▌<br>▐███████▌<br>————</div>`;
     grid.appendChild(div);
   });
 
