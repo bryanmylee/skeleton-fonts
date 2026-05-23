@@ -284,120 +284,6 @@ def draw_quadratic_skeleton_shape_glyphs(
     return generated_glyphs
 
 
-def apply_variable_deltas(
-    font: TTFont,
-    target_glyph_name: str,
-    zero_glyph_name: str,
-    point_count: int,
-    right_side_indices: List[int],
-):
-    """
-    Safely calculates and binds point-matched variations for new geometries by
-    extracting explicit axis variations directly from the gvar table framework.
-    """
-    if "gvar" not in font or zero_glyph_name not in font["gvar"].variations:
-        return
-    gvar_table = font["gvar"]
-    zero_variations = cast(List[TupleVariation], gvar_table.variations[zero_glyph_name])
-    new_variations: List[TupleVariation] = []
-
-    for var in zero_variations:
-        delta_width = 0
-
-        # Method 1: Look for an explicit advance width delta in the coordinates
-        # tracking.
-        if var.coordinates:
-            # Check the raw coordinates array length provided by the font
-            # compiler Some compilers include phantom points explicitly in the
-            # array
-            phantom_idx = len(var.coordinates) - 4
-            if (
-                0 <= phantom_idx < len(var.coordinates)
-                and var.coordinates[phantom_idx] is not None
-            ):
-                coord = var.coordinates[phantom_idx]
-                if isinstance(coord, tuple) and coord[0] != 0:
-                    delta_width = coord[0]
-
-        # Method 2: If the phantom point delta was optimized away (0, 0), find
-        # the point on the far right edge of the 'zero' glyph outline and copy
-        # its X shift.
-        if delta_width == 0 and var.coordinates:
-            zero_base_glyph = font["glyf"][zero_glyph_name]
-
-            # Find the index of the point closest to the right-most bounding
-            # edge of zero.
-            max_x = -99999
-            rightmost_point_idx = 0
-
-            # Loop through default base points to find the right-edge anchor
-            # index.
-            for i, pt in enumerate(zero_base_glyph.coordinates):
-                if pt[0] > max_x:
-                    max_x = pt[0]
-                    rightmost_point_idx = i
-
-            # Extract how much that specific right edge point shifted under
-            # this master state.
-            if (
-                rightmost_point_idx < len(var.coordinates)
-                and var.coordinates[rightmost_point_idx] is not None
-            ):
-                edge_coord = var.coordinates[rightmost_point_idx]
-                if isinstance(edge_coord, tuple):
-                    delta_width = edge_coord[0]
-
-        if delta_width == 0:
-            continue
-
-        # Force structural cast to integer to pass iOS's CoreText validation
-        # parameters
-        int_delta_width = int(round(delta_width))
-
-        # CoreText requirement: Build out precise coordinate arrays explicitly
-        # mapping base points AND the 4 standard OpenType phantom points
-        # structurally.
-        coords = [(0, 0)] * point_count
-
-        # Map changes cleanly across targeted vector points
-        for idx in right_side_indices:
-            if idx < point_count:
-                coords[idx] = (int_delta_width, 0)
-
-        # CoreText requirement: Explicitly hand-compile the trailing 4
-        # structural phantom points. [Left Side Bearing, Right Advance Width,
-        # Top Side Bearing, Bottom Advance Height]
-        coords.extend([(0, 0), (int_delta_width, 0), (0, 0), (0, 0)])
-
-        new_var = TupleVariation(var.axes, coords)
-        new_variations.append(new_var)
-
-    if new_variations:
-        gvar_table.variations[target_glyph_name] = new_variations
-        # Fix maxp Table Bounds: Make sure CoreText allocates enough structural
-        # memory to parse our injected variation maps.
-        if "maxp" in font:
-            maxp = font["maxp"]
-            # Enforce that maxPoints matches or exceeds the raw geometry
-            # constraints we added
-            if hasattr(maxp, "maxPoints"):
-                maxp.maxPoints = max(cast(int, maxp.maxPoints), point_count + 4)
-
-        # Android's FreeType uses the HVAR table to track variable layout
-        # bounds. Ensure our modified glyph links up to the same width delta
-        # mapping index as the '0' character we are copying layout behaviors
-        # from.
-        if "HVAR" in font:
-            hvar_table = font["HVAR"].table
-            if hasattr(hvar_table, "VarIdxMap") and hvar_table.VarIdxMap is not None:
-                # If '0' has a dedicated index mapping in the layout variations
-                # store, point our new target glyph directly to that exact same
-                # index link!
-                if zero_glyph_name in hvar_table.VarIdxMap.mapping:
-                    zero_metric_index = hvar_table.VarIdxMap.mapping[zero_glyph_name]
-                    hvar_table.VarIdxMap.mapping[target_glyph_name] = zero_metric_index
-
-
 def process_font(args: argparse.Namespace, font_path: Path, save_path: Path):
     try:
         font = TTFont(font_path)
@@ -425,12 +311,9 @@ def process_font(args: argparse.Namespace, font_path: Path, save_path: Path):
     glyf_table["uni2590"] = new_glyphs["skel_left"]
 
     # Inherit absolute advance metrics verbatim from emdash.
-    emdash_advance_width = hmtx_table[emdash_name][0]
-    emdash_lsb = hmtx_table[emdash_name][1]
-
-    hmtx_table["uni2588"] = (emdash_advance_width, emdash_lsb)
-    hmtx_table["uni258C"] = (emdash_advance_width, emdash_lsb)
-    hmtx_table["uni2590"] = (emdash_advance_width, emdash_lsb)
+    hmtx_table["uni2588"] = hmtx_table[emdash_name]
+    hmtx_table["uni258C"] = hmtx_table[emdash_name]
+    hmtx_table["uni2590"] = hmtx_table[emdash_name]
 
     # Map the variation matrices.
     if "gvar" in font and new_variations:
