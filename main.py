@@ -9,40 +9,42 @@ from fontTools.pens.ttGlyphPen import TTGlyphPen
 
 def draw_skeleton_shapes(
     font: TTFont, args: argparse.Namespace
-) -> Tuple[Dict[str, Glyph], str, int]:
+) -> Tuple[Dict[str, Glyph], Dict[str, List[TupleVariation]], str]:
     """
-    Calculates metrics based on character '0' and generates TrueType glyph definitions.
+    Calculates metrics based on character zero '0' for height and em dash '—'
+    for width, and generates TrueType glyph definitions.
     """
+    glyf_table = font["glyf"]
     glyph_set: Dict[str, Glyph] = cast(Dict[str, Glyph], font.getGlyphSet())
 
-    glyf_table = font["glyf"]
+    # Calculate bounding box width from emdash.
+    emdash_name = "emdash" if "emdash" in glyph_set else "uni2014"
+    if emdash_name not in glyph_set:
+        raise ValueError(
+            "Target font does not contain a suitable base horizontal em dash glyph."
+        )
 
-    # Target character '0' (or fallback) to extract metrics
-    zero_glyph_name = "zero" if "zero" in glyph_set else "uni0030"
+    em_glyph = glyf_table[emdash_name]
+    x_left = float(em_glyph.xMin)
+    x_right = float(em_glyph.xMax)
 
-    if zero_glyph_name in glyph_set:
-        zero_glyph = glyf_table[zero_glyph_name]
-        ymin, ymax = int(zero_glyph.yMin), int(zero_glyph.yMax)
-        # Get advance width from hmtx table safely
-        zero_width = int(font["hmtx"][zero_glyph_name][0])
+    # Calculate bounding box height from '0'.
+    zero_name = "zero" if "zero" in glyph_set else "uni0030"
+    if zero_name in glyph_set:
+        zero_glyph = glyf_table[zero_name]
+        ymin, ymax = float(zero_glyph.yMin), float(zero_glyph.yMax)
     else:
-        # Secure fallback constants standard to TrueType metrics
-        ymin, ymax = 0, int(font["head"].unitsPerEm * 0.7)  # pyright: ignore[reportAttributeAccessIssue]
-        zero_width = int(font["head"].unitsPerEm * 0.5)  # pyright: ignore[reportAttributeAccessIssue]
+        ymin, ymax = 0.0, float(font["head"].unitsPerEm * 0.7)  # pyright: ignore[reportAttributeAccessIssue]
 
     zero_height = ymax - ymin
+    skel_height = float(zero_height * args.height_scale)
+    skel_y_center = float((ymin + ymax) / 2 + args.y_offset)
 
-    # Calculate exact bounding boxes
-    skel_height = int(zero_height * args.height_scale)
-    skel_width = int(zero_width)
-    skel_y_center = int((ymin + ymax) / 2 + args.y_offset)
+    y_top = float(skel_y_center + (skel_height / 2))
+    y_bottom = y_top - skel_height
 
-    y_top = int(skel_y_center + (skel_height / 2))
-    y_bottom = int(skel_y_center - (skel_height / 2))
-    x_left = 0
-    x_right = skel_width
     corner_round = float(min(max(args.corner_round, 0.0), 0.5))
-    radius = int(skel_height * corner_round)
+    radius = skel_height * corner_round
 
     if corner_round == 0.5:
         generated_glyphs = draw_semicircle_skeleton_shape_glyphs(
@@ -63,16 +65,68 @@ def draw_skeleton_shapes(
             radius=radius,
         )
 
-    return generated_glyphs, zero_glyph_name, radius
+    # Extract and duplicate variation mappings (gvar) directly from emdash.
+    generated_variations: Dict[str, List[TupleVariation]] = {}
+    if "gvar" in font and emdash_name in font["gvar"].variations:
+        emdash_variations = cast(
+            List[TupleVariation], font["gvar"].variations[emdash_name]
+        )
+
+        for variant_key in ("skel_fill", "skel_left", "skel_right"):
+            target_glyph = generated_glyphs[variant_key]
+
+            new_vars: List[TupleVariation] = []
+            point_count = len(target_glyph.coordinates)
+
+            for var in emdash_variations:
+                if not var.coordinates:
+                    continue
+                # Capture structural delta boundaries from emdash master state.
+                left_coord = min(
+                    var.coordinates,
+                    key=lambda coord: coord[0] if type(coord) is tuple else 0,
+                )
+                right_coord = max(
+                    var.coordinates,
+                    key=lambda coord: coord[0] if type(coord) is tuple else 0,
+                )
+
+                delta_left = left_coord[0] if type(left_coord) is tuple else 0
+                delta_right = right_coord[0] if type(right_coord) is tuple else 0
+
+                # CoreText compliant clean structure map.
+                coords = [(0, 0) for _ in range(point_count)]
+
+                for idx, (x, y) in enumerate(
+                    cast(List[Tuple[int, int]], target_glyph.coordinates)
+                ):
+                    # Move control points within a radius width from the
+                    # left/right boundary to properly stretch the glyph and
+                    # include the rounded corners.
+                    if abs(x - x_left) <= radius + 1:
+                        coords[idx] = (delta_left, 0)
+                    elif abs(x - x_right) <= radius + 1:
+                        coords[idx] = (delta_right, 0)
+
+                # Append explicit phantom points for CoreText.
+                # [Left Side Bearing, Right Advance Width, Top Side Bearing, Bottom Advance Height]
+                # For all variations, the layout container metrics scale
+                # exactly like the em dash.
+                coords.extend([(delta_left, 0), (delta_right, 0), (0, 0), (0, 0)])
+                new_vars.append(TupleVariation(var.axes, coords))
+
+            generated_variations[variant_key] = new_vars
+
+    return generated_glyphs, generated_variations, emdash_name
 
 
 def draw_semicircle_skeleton_shape_glyphs(
     glyph_set: Dict[str, Glyph],
-    y_top: int,
-    y_bottom: int,
-    x_left: int,
-    x_right: int,
-    radius: int,
+    y_top: float,
+    y_bottom: float,
+    x_left: float,
+    x_right: float,
+    radius: float,
 ):
     generated_glyphs: Dict[str, Glyph] = {}
 
@@ -83,8 +137,8 @@ def draw_semicircle_skeleton_shape_glyphs(
     # Distance from the edge of the circle bounding box to the 45-degree anchor point
     # coordinate offset: r * (1 - cos(45)) = r * (1 - 0.7071) ≈ 0.2929 * r
     # control offset: r * sin(45) * (sqrt(2)-1) is factored cleanly below
-    chord_offset = int(radius * 0.2928932188)
-    control_offset = int(radius * q_arc)
+    chord_offset = float(radius * 0.2928932188)
+    control_offset = float(radius * q_arc)
 
     generated_glyphs: Dict[str, Glyph] = {}
 
@@ -174,11 +228,11 @@ def draw_semicircle_skeleton_shape_glyphs(
 
 def draw_quadratic_skeleton_shape_glyphs(
     glyph_set: Dict[str, Glyph],
-    y_top: int,
-    y_bottom: int,
-    x_left: int,
-    x_right: int,
-    radius: int,
+    y_top: float,
+    y_bottom: float,
+    x_left: float,
+    x_right: float,
+    radius: float,
 ):
     generated_glyphs: Dict[str, Glyph] = {}
 
@@ -363,68 +417,32 @@ def process_font(args: argparse.Namespace, font_path: Path, save_path: Path):
     hmtx_table = font["hmtx"]
 
     # Generate the math-exact static loading geometries.
-    new_glyphs, zero_name, radius = draw_skeleton_shapes(font, args)
+    new_glyphs, new_variations, emdash_name = draw_skeleton_shapes(font, args)
 
-    # Assign base outlines.
-    # Full Block █
+    # Assign base structural paths.
     glyf_table["uni2588"] = new_glyphs["skel_fill"]
-    # Left Half Block ▌ (Used as right-cap)
     glyf_table["uni258C"] = new_glyphs["skel_right"]
-    # Right Half Block ▐ (Used as left-cap)
     glyf_table["uni2590"] = new_glyphs["skel_left"]
 
-    # Setup automatic uniform baseline advanced tracking metrics.
-    skel_width = cast(int, hmtx_table[zero_name][0])
-    hmtx_table["uni2588"] = (skel_width, 0)
-    hmtx_table["uni258C"] = (skel_width, 0)
-    hmtx_table["uni2590"] = (skel_width, 0)
+    # Inherit absolute advance metrics verbatim from emdash.
+    emdash_advance_width = hmtx_table[emdash_name][0]
+    emdash_lsb = hmtx_table[emdash_name][1]
 
-    # Apply precise, structural deltas to the right-side vertices of our new shapes.
-    # We pass the exact indices of points that sit on the right edge of our geometry.
-    if "gvar" in font:
+    hmtx_table["uni2588"] = (emdash_advance_width, emdash_lsb)
+    hmtx_table["uni258C"] = (emdash_advance_width, emdash_lsb)
+    hmtx_table["uni2590"] = (emdash_advance_width, emdash_lsb)
 
-        def get_right_side_indices(glyph_obj, right_x: int) -> List[int]:
-            indices = []
-            if hasattr(glyph_obj, "coordinates"):
-                for idx, (x, y) in enumerate(glyph_obj.coordinates):
-                    # Use the radius + 1-unit tolerance threshold to move the
-                    # entire rounded cap instead of stretching the cap.
-                    if abs(x - right_x) <= radius + 1:
-                        indices.append(idx)
-            return indices
+    # Map the variation matrices.
+    if "gvar" in font and new_variations:
+        gvar_table = font["gvar"]
+        gvar_table.variations["uni2588"] = new_variations["skel_fill"]
+        gvar_table.variations["uni258C"] = new_variations["skel_right"]
+        gvar_table.variations["uni2590"] = new_variations["skel_left"]
 
-        # Stretch uni2588 (Full Block) to fill the full glyph.
-        apply_variable_deltas(
-            font,
-            "uni2588",
-            zero_name,
-            point_count=len(glyf_table["uni2588"].coordinates),
-            right_side_indices=get_right_side_indices(
-                glyf_table["uni2588"], skel_width
-            ),
-        )
-
-        # Stretch uni258C (Right Cap) to fill the full glyph.
-        apply_variable_deltas(
-            font,
-            "uni258C",
-            zero_name,
-            point_count=len(glyf_table["uni258C"].coordinates),
-            right_side_indices=get_right_side_indices(
-                glyf_table["uni258C"], skel_width
-            ),
-        )
-
-        # Stretch uni2588 (Left Cap) to fill the full glyph.
-        apply_variable_deltas(
-            font,
-            "uni2590",
-            zero_name,
-            point_count=len(glyf_table["uni2590"].coordinates),
-            right_side_indices=get_right_side_indices(
-                glyf_table["uni2590"], skel_width
-            ),
-        )
+        # Keep maxp limits safely aligned for iOS CoreText layout limits
+        if "maxp" in font and hasattr(font["maxp"], "maxPoints"):
+            max_pts = max(len(g.coordinates) for g in new_glyphs.values())
+            font["maxp"].maxPoints = max(cast(int, font["maxp"].maxPoints), max_pts + 4)
 
     # Re-link character mapping tables.
     cmap = font.getBestCmap()
