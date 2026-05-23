@@ -1,13 +1,13 @@
 <style>
-  /* @font-face {
+  @font-face {
     font-family: "Inter";
     src: url("../fonts_skeleton/Inter-VariableFont_opsz,wght.ttf")
       format("truetype-variations");
     font-weight: 100 900;
     font-style: normal;
-  } */
+  }
 
-  @font-face {
+  /* @font-face {
     font-family: "Inter";
     src: url("../fonts_skeleton/Inter-Regular.ttf") format("truetype");
     font-weight: 400;
@@ -19,7 +19,7 @@
     src: url("../fonts_skeleton/Inter-Bold.ttf") format("truetype");
     font-weight: 700;
     font-style: normal;
-  }
+  } */
 
   :root {
     --color-background-primary: #fefefe;
@@ -281,7 +281,7 @@
   weights.forEach((w) => {
     const div = document.createElement("div");
     div.className = "weight-swatch";
-    div.innerHTML = `<div class="wlabel" style="font-weight:${w};">${w} — ${weightLabels[w]}</div><div class="skel animate" style="font-weight:${w}; font-size:16px;">▐█████████████▌<br>▐███████▌<br>————</div>`;
+    div.innerHTML = `<div class="wlabel" style="font-weight:${w};">${w} — ${weightLabels[w]}</div><div class="skel animate" style="font-weight:${w}; font-size:16px;">▐███████▌<br>▐█████▌<br>————</div>`;
     grid.appendChild(div);
   });
 
