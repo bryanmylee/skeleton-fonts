@@ -404,7 +404,7 @@ def main():
     )
     parser.add_argument(
         "input_font",
-        help="Path to input TTF/WOFF font file or directory containing font files",
+        help="Path to input font file or directory containing font files",
     )
     parser.add_argument(
         "--output", type=str, help="Output file or directory for updated fonts"
